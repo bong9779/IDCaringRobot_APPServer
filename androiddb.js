@@ -10,14 +10,14 @@ const now_date = moment().format('YYYY-MM-DD HH:mm:ss');
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
 
-app.listen(3000, '172.30.1.44', function () {
+app.listen(5000, '172.16.108.245', function () {
     console.log('서버 실행 중...');
 });
 
 var connection = mysql.createConnection({
     host: "localhost",
     user: "root",
-    database: "testandroid",
+    database: "caringrobot",
     password: "ranch0104",
     port: "3306"
 });
@@ -58,10 +58,11 @@ app.post('/user/time', function (req, res) {
     var medName = req.body.medName;
     var patientname = req.body.patientname;
     var medTime = req.body.medTime;
+    var patient_id = req.body.patient_id;
     date = now_date;
     // 삽입을 수행하는 sql문.
-    var sql = 'INSERT INTO TimeSetting (patientname,medName,medTime,date) VALUES (?,?,?,?)';
-    var params = [patientname, medName, medTime, date];
+    var sql = 'INSERT INTO TimeSettings (patientname,patient_id,medName,medTime,date) VALUES (?,?,?,?,?)';
+    var params = [patientname,patient_id, medName, medTime, date];
 
     // sql 문의 ?는 두번째 매개변수로 넘겨진 params의 값으로 치환된다.
     connection.query(sql, params, function (err, result) {
@@ -89,8 +90,8 @@ app.post('/user/delmeddata', function(req, res){
     var message;
     var patientname = req.body.patientname;
     console.log(patientname+"!!!");
-    var sql= 'select * from TimeSetting where patientname=?';
-    var sqldel= 'delete from TimeSetting where medName=? and patientname=?';
+    var sql= 'select * from TimeSettings where patientname=?';
+    var sqldel= 'delete from TimeSettings where medName=? and patientname=?';
     connection.query(sql, patientname, function (err, result) {
         var resultCode = 404;
         if (err) {
@@ -122,12 +123,13 @@ app.post('/user/mednamecheck', function (req, res) {
     var medName = req.body.medName;
     var medTime = req.body.medTime;
     var patientName = req.body.patientName;
+    var patient_id = req.body.patient_id;
     date = now_date;
     // 삽입을 수행하는 sql문.
-    var sql= 'select * from TimeSetting where medName=? and patientName=?';
-    var sqldel= 'delete from TimeSetting where medName=? and patientName=?';
-    var sqlinsert= 'INSERT INTO alltimelist (medName,medTime,patientname,date) VALUES (?,?,?,?)';
-    var params = [medName, medTime, patientName, date];
+    var sql= 'select * from TimeSettings where medName=? and patientName=?';
+    var sqldel= 'delete from TimeSettings where medName=? and patientName=?';
+    var sqlinsert= 'INSERT INTO alltimelists (medName,medTime,patientname,date,patient_id) VALUES (?,?,?,?,?)';
+    var params = [medName, medTime, patientName, date, patient_id];
     var params1 =[medName, patientName];
 
     // sql 문의 ?는 두번째 매개변수로 넘겨진 params의 값으로 치환된다.
@@ -165,7 +167,7 @@ app.post('/user/gettime', function (req, res) {
     var medNameApp =[];
     var medTimeApp =[];
     var patientname = req.body.patientname;
-    var sql = 'select * from TimeSetting where patientname=?';
+    var sql = 'select * from TimeSettings where patientname=?';
 
     connection.query(sql, patientname, function (err, result) {
         var resultCode = 404;
@@ -201,6 +203,7 @@ app.post('/user/gettime', function (req, res) {
 app.post('/user/login', function (req, res) {
     var userId = req.body.userId;
     var userPwd = req.body.userPwd;
+    var patient_id;
     var sql = 'select * from Users where UserId = ?';
 
     connection.query(sql, userId, function (err, result) {
@@ -218,11 +221,13 @@ app.post('/user/login', function (req, res) {
                 message = '비밀번호가 틀렸습니다!';
             } else {
                 resultCode = 200;
-                message = '로그인 성공! ' + result[0].UserName + '님 환영합니다!';
+                patient_id = result[0].patient_id;
+                message = '로그인 성공! ' + result[0].patient_id + result[0].UserName + '님 환영합니다!';
             }
         }
 
         res.json({
+            'patient_id' :patient_id,
             'code': resultCode,
             'message': message,
             'userid' : result[0].UserName
